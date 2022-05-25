@@ -1,62 +1,73 @@
-#include "c2d/base.h"
 #include <citro2d.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <3ds.h>
-typedef struct {
+typedef struct
+{
   float x;
   float y;
   float height;
   float width;
 } Rect;
 
-typedef struct {
+typedef struct
+{
   Rect rect;
   float speedx;
   float speedy;
 } Ball;
 #define WHITE 0xFFFFFFFF
-void update(Rect *w) {
-  u32 kDown = hidKeysHeld();
-  if (kDown & KEY_DDOWN) {
-    w->y += 5;
+void update(Rect *w, int up_or_down, float speed)
+{
 
-  } else if (kDown & KEY_DUP) {
-    w->y -= 5;
+  if (up_or_down == 1)
+  {
+    w->y -= speed;
+  }
+  else if (up_or_down == -1)
+  {
+    w->y += speed;
   }
   w->y = C2D_Clamp(w->y, 0, 190);
 }
 
-void draw(Rect *w) {
+void draw(Rect *w)
+{
   C2D_DrawRectSolid(w->x, w->y, 1, w->width, w->height, WHITE);
 }
 
-void collide(Ball *ball, Rect *leftRect, Rect *rightRect) {
-  if (ball->rect.x < (leftRect->x) || (ball->rect.x > (rightRect->x))) {
+void collide(Ball *ball, Rect *leftRect, Rect *rightRect)
+{
+  if (ball->rect.x < (leftRect->x) || (ball->rect.x > (rightRect->x)))
+  {
     if (ball->rect.x < (leftRect->x) && ball->rect.y > (leftRect->y) &&
-        ball->rect.y < (leftRect->y + leftRect->height)) {
+        ball->rect.y < (leftRect->y + leftRect->height))
+    {
       ball->speedx *= -1;
       ball->rect.x = leftRect->x + 5;
-
-    } else if (ball->rect.x > (rightRect->x) && ball->rect.y > (rightRect->y) &&
-               ball->rect.y < (rightRect->y + rightRect->height)) {
+    }
+    else if (ball->rect.x > (rightRect->x) && ball->rect.y > (rightRect->y) &&
+             ball->rect.y < (rightRect->y + rightRect->height))
+    {
       ball->speedx *= -1;
       ball->rect.x = rightRect->x - 5;
     }
   }
 }
-Ball *createBall() {
+Ball *createBall()
+{
   Ball *a = (Ball *)malloc(sizeof(Ball));
   a->rect = (Rect){200.0, 95, 20, 20};
-  a->speedx = 2;
-  a->speedy = 0.2;
+  a->speedx = ((float)rand() / (float)(RAND_MAX / 5)) + 1;
+  a->speedy = ((float)rand() / (float)(RAND_MAX / 5)) + .1;
   return a;
 }
 
-int main(int argc, char **argv) {
-
+int main(int argc, char **argv)
+{
+  srand(time(NULL));
   gfxInitDefault();
   C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
   C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
@@ -70,12 +81,34 @@ int main(int argc, char **argv) {
   int leftPoints = 0;
   int rightPoints = 0;
   // Main loop
-  while (aptMainLoop()) {
+  while (aptMainLoop())
+  {
 
     hidScanInput();
-    update(&rightRect);
-    update(&leftRect);
-    if (ball->rect.y > 210 || ball->rect.y < 0) {
+    u32 kDown = hidKeysHeld();
+    int up_and_down = 0;
+    if (kDown & KEY_DUP)
+    {
+      up_and_down = 1;
+    }
+    if (kDown & KEY_DDOWN)
+    {
+      up_and_down = -1;
+    }
+
+    update(&rightRect, up_and_down, 5);
+    if (ball->rect.y < leftRect.y)
+    {
+      up_and_down = 1;
+    }
+    else
+    {
+      up_and_down = -1;
+    }
+
+    update(&leftRect, up_and_down, 1);
+    if (ball->rect.y > 210 || ball->rect.y < 0)
+    {
       ball->speedy *= -1;
     }
     ball->rect.y += ball->speedy;
@@ -89,33 +122,36 @@ int main(int argc, char **argv) {
     draw(&rightRect);
     draw(&(ball->rect));
     C3D_FrameEnd(0);
-    if (ball->rect.x < 0 || ball->rect.x > 400) {
-      if (ball->rect.x < 0) {
+    if (ball->rect.x < 0 || ball->rect.x > 400)
+    {
+      if (ball->rect.x < 0)
+      {
         leftPoints++;
-
-      } else if (ball->rect.x > 400) {
+      }
+      else if (ball->rect.x > 400)
+      {
         rightPoints++;
       }
       printf("%d %-d \n", leftPoints, rightPoints);
       free(ball);
       ball = createBall();
-	  loop = 1;
-	  rightRect.height = 100;
-	  leftRect.height = 100;
+      loop = 1;
+      rightRect.height = 100;
+      leftRect.height = 100;
     }
-    if (loop % 100 == 0) {
+    if (loop % 100 == 0)
+    {
       ball->rect.height -= 1;
       ball->rect.width -= 1;
-	  rightRect.height -= 1; 
-	  leftRect.height -= 1;
+      rightRect.height -= 1;
+      leftRect.height -= 1;
       loop = 0;
     }
     ball->rect.width = C2D_Clamp(ball->rect.width, 5, 20);
     ball->rect.height = C2D_Clamp(ball->rect.height, 5, 20);
-	rightRect.height = C2D_Clamp(rightRect.height, 10, 50);
-	leftRect.height = C2D_Clamp(leftRect.height, 10, 50);
+    rightRect.height = C2D_Clamp(rightRect.height, 10, 50);
+    leftRect.height = C2D_Clamp(leftRect.height, 10, 50);
     loop++;
-    u32 kDown = hidKeysDown();
     if (kDown & KEY_START)
       break; // break in order to return to hbmenu
   }
